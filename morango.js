@@ -1,3 +1,4 @@
+//teste de modificação
 // Importa os módulos necessários
 const express = require('express');
 const mysql = require('mysql');
@@ -7,10 +8,10 @@ const secretKey = '123456';
 
 // Configurações da conexão com o banco de dados
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'programadorweb-11-03-2023'
+    host: 'mysqlsenac3.mysql.database.azure.com',
+    user: 'usuariosenac',
+    password: 'Senac123',
+    database: 'programadorweb'
   });
 
   // Cria o servidor Express
