@@ -2,7 +2,7 @@
   "name": "apiweb",
   "version": "1.0.0",
   "description": "Api desenvolvida em Node.js com várias EndPoints e integração com MySQL",
-  "main": "index.js",
+  "main": "morango.js",
   "keywords": [],
   "author": "",
   "license": "ISC",
