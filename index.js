@@ -3,6 +3,8 @@ const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
 
+const port = process.env.PORT || 3000
+
 // Configurações da conexão com o banco de dados
 const db = mysql.createConnection({
     host: 'localhost',
@@ -303,6 +305,6 @@ app.post('/usuarios', (req, res) => {
 });
 
 // Inicia o servidor na porta 3000
-app.listen(3000, () => {
-    console.log('Servidor iniciado na porta 3000');
+app.listen(port, () => {
+    console.log('Servidor iniciado na porta');
   });
