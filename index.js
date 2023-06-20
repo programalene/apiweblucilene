@@ -13,7 +13,6 @@ const db = mysql.createConnection({
     database: 'programadorweb-31-03-2023'
   });
 
-  // Cria o servidor Express
 const app = express();
 
 // Adiciona o middleware Cors para permitir o acesso externo à API
@@ -27,9 +26,65 @@ app.get('/', (req, res) => {
     res.send('Minha  API de Programador Web');
   });
 
+// Método para gerar um token de autenticação
+function generateToken(codigousuario) {
+  const token = jwt.sign({ codigousuario: codigousuario }, secretKey, { expiresIn: '10h' });
+  const data_criacao = new Date();
+  const data_expiracao = new Date();
+  data_expiracao.setHours(data_expiracao.getHours() + 1); // Define a expiração do token para 1 hora a partir de agora
+  //data_criacao.setHours(data_criacao.getHours() - 1);
+  const sql = "INSERT INTO tokens (token, codigousuario, data_criacao, data_expiracao) VALUES ('"+token+"', "+codigousuario+", '"+data_criacao.toISOString()+"', '"+data_expiracao.toISOString()+"')";
+  db.query(sql, (err, result) => {
+    if (err) throw err;
+    console.log('Token armazenado no banco de dados');
+  });
+  return token;
+}
+
+// Função de autenticação
+function authenticate(req, res, next) {
+  const token = req.body.token; // recupera o token do corpo da solicitação
+
+  // Verifica se o token está presente
+  if (!token) {
+    return res.status(401).send({ message: 'Token não encontrado.' });
+  }
+
+  // Verifica se o token é válido
+  db.query('SELECT * FROM tokens WHERE token = ?', token, (err, result) => {
+    if (err) throw err;
+
+    if (!result.length || new Date() > new Date(result[0].data_expiracao)) {
+      return res.status(401).send({ message: 'Token inválido ou expirado.' });
+    }
+
+    // Se o token for válido, armazena o código do usuário na requisição para uso posterior
+    req.codigousuario = result[0].codigousuario;
+
+    // Chama a próxima função na pilha de middlewares
+    next();
+  });
+}
+
+// Rota para verificar se o usuário está autenticado
+app.post('/autenticado', authenticate, (req, res) => {
+  res.send({'autenticado':'ok'});
+});
+
+
+// Método para apagar algum curso
+app.delete('/cursos/:codigocurso', (req, res) => {
+  const sql = 'DELETE FROM cursos WHERE codigocurso = ' + req.params.codigocurso;
+  db.query(sql, (err, result) => {
+    if (err) throw err;
+    res.send('Curso apagado: '+ req.params.codigocurso);
+  });
+});
+
+
 // Método para listar todos os registros da tabela alunos
 app.get('/alunos', (req, res) => {
-    const sql = 'SELECT codigoaluno, nome, endereco, telefone FROM alunos';
+    const sql = 'SELECT codigoaluno, nome, endereco, telefone FROM alunos ORDER BY nome';
     db.query(sql, (err, result) => {
       if (err) throw err;
       res.send(result);
@@ -86,8 +141,10 @@ app.get('/cursos', (req, res) => {
                 DATE_FORMAT(cursos.inicio, '%d/%m/%Y') as inicio, \
                 DATE_FORMAT(cursos.termino, '%d/%m/%Y') as termino, \
                 cursos.turno, \
-                FORMAT(cursos.valor, 2, 'pt_BR') as valor \
-              FROM cursos";
+                FORMAT(cursos.valor, 2, 'pt_BR') as valor, \
+                cursos.cargahoraria \
+              FROM cursos \
+              ORDER BY cursos.nome";
     db.query(sql, (err, result) => {
       if (err) throw err;
       res.send(result);
@@ -102,7 +159,8 @@ app.get('/cursos/:codigocurso', (req, res) => {
                 DATE_FORMAT(cursos.inicio, '%d/%m/%Y') as inicio, \
                 DATE_FORMAT(cursos.termino, '%d/%m/%Y') as termino, \
                 cursos.turno, \
-                FORMAT(cursos.valor, 2, 'pt_BR') as valor \
+                FORMAT(cursos.valor, 2, 'pt_BR') as valor, \
+                cursos.cargahoraria \
               FROM cursos \
               WHERE codigocurso = " + req.params.codigocurso;
   db.query(sql, (err, result) => {
@@ -301,6 +359,39 @@ app.post('/usuarios', (req, res) => {
   db.query(sql, (err, result) => {
     if (err) throw err;
     res.send('Registro inserido com sucesso!');
+  });
+});
+
+app.post('/login', (req, res) => {
+  const email = req.body.email;
+  const senha = req.body.senha;
+  const sql = "SELECT codigousuario FROM usuarios WHERE email = '"+email+"' AND senha = MD5('" +senha+"')";
+  db.query(sql, (err, result) => {
+    if (err) throw err;
+    if (result.length > 0) {
+      //res.status(200).send('Login OK');
+      const codigousuario = result[0].codigousuario;
+      const token = generateToken(codigousuario);
+      res.status(200).send({token: token});      
+    } else {
+      res.status(401).send('Credenciais inválidas');
+    }
+  });
+});
+
+app.get('/alunosPorCurso/:codigocurso', (req, res) => {
+  const sql = 'SELECT alunos.*, matriculas.codigomatricula FROM alunos JOIN matriculas ON (matriculas.codigoaluno = alunos.codigoaluno) JOIN cursos ON (cursos.codigocurso = matriculas.codigocurso) where cursos.codigocurso = ' + req.params.codigocurso;
+  db.query(sql, (err, result) => {
+    if (err) throw err;
+    res.send(result);
+  });
+});
+
+app.get('/matriculasPorAluno/:codigoaluno', (req, res) => {
+  const sql = 'SELECT cursos.*, matriculas.codigomatricula FROM alunos JOIN matriculas ON (matriculas.codigoaluno = alunos.codigoaluno) JOIN cursos ON (cursos.codigocurso = matriculas.codigocurso) where alunos.codigoaluno = ' + req.params.codigoaluno;
+  db.query(sql, (err, result) => {
+    if (err) throw err;
+    res.send(result);
   });
 });
 
