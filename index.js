@@ -7,13 +7,14 @@ const jwt = require('jsonwebtoken');
 const secretKey = '123456';
 const port = process.env.PORT || 3000
 
-// Configurações da conexão com o banco de dados
+
 const db = mysql.createConnection({
-    host: 'mysqlsenac3.mysql.database.azure.com',
+    host: 'mysqlsenac.mysql.database.azure.com',
     user: 'usuariosenac',
     password: 'Senac123',
     database: 'programadorweb'
   });
+
 
 const app = express();
 
